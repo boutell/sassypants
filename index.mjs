@@ -2,7 +2,7 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import validator from 'validator';
 import { promisify } from 'util';
-import { MongoClient, ObjectId } from 'mongodb';
+import { MongoClient } from 'mongodb';
 import nodemailer from 'nodemailer';
 import { randomBytes, randomUUID, scryptSync } from 'crypto';
 import { convert } from 'html-to-text';
@@ -116,7 +116,8 @@ export default async function sassypants(options = {}) {
 
   page('/login', login, req => ({
     title: 'Log In',
-    error: req.query.error
+    error: req.query.error,
+    reset: req.query.reset
   }));
 
   get('/logout', async (req, res) => {
@@ -149,19 +150,19 @@ export default async function sassypants(options = {}) {
     title: 'Please Check Your Inbox'
   }));
 
-  page('/reset/:code', resetForm, async (req, res) => {
-    const account = accounts.findOne({
-      resetCode: req.params.code
-    });
+  get('/reset/:code', async (req, res) => {
+    req.session.resetPasswordCode = req.params.code;
+    const account = await validateResetPassword(req);
     if (!account) {
       return res.redirect('/login?error=reset-not-found');
     }
-    const validAt = new Date();
-    validAt.setMinutes(now.getMinutes() - options?.reset?.minutes || 60);
-    if (account.resetRequestedAt < validAt) {
-      return res.redirect('/login?error=reset-not-found');
+    return res.redirect('/reset-form');
+  });
+
+  page('/reset-form', resetForm, async req => {
+    if (!await validateResetPassword(req)) {
+      res.redirect('/login?error=reset-not-found');
     }
-    req.session.resetCode = req.params.resetCode;
     return {
       title: 'Reset Password'
     };
@@ -231,38 +232,31 @@ export default async function sassypants(options = {}) {
     }
   });
 
-  post('/reset-form', async (req, res) => {
-    const password = ((typeof req.body.password) === 'string') && req.body.password;
-    if (!password) {
-      // required attribute was bypassed, we don't
-      // have to be polite about this
-      return res.redirect(`/reset/${req.session.resetCode}`);
-    }
-
+  post('/reset', async (req, res) => {
     const email = isEmail(req.body.email) && normalizeEmail(req.body.email);
     if (!email) {
       // required attribute was bypassed, we don't
       // have to be polite about this
       return res.redirect('/reset');
     }
-    const resetCode = randomUUID();
+    const resetPasswordCode = randomUUID();
     const result = await accounts.updateOne({
       email
     }, {
       $set: {
-        resetRequestedAt: new Date(),
-        resetCode
+        resetRequestedAt: Date.now(),
+        resetPasswordCode
       }
     });
     if (result.modifiedCount === 1) {
       const account = await accounts.findOne({
         email
       });
-      const resetUrl = `${options.baseUrl}/reset/${resetCode}`;
+      const resetUrl = `${options.baseUrl}/reset/${resetPasswordCode}`;
       await sendEmail(resetEmail, {
         name: account.name,
         email: account.email,
-        subject: options.email?.reset?.subject || `Resetting your password on ${options.name}`,
+        subject: options.email?.reset?.subject || `Resetting your password on ${options.service}`,
         resetUrl
       });
     }
@@ -271,25 +265,27 @@ export default async function sassypants(options = {}) {
     return res.redirect('/reset-sent');
   });
 
-  post('/reset', async (req, res) => {
-    const email = isEmail(req.body.email) && normalizeEmail(req.body.email);
-    if (!email) {
-      // required attribute was bypassed, we don't
-      // have to be polite about this
-      return res.redirect('/reset');
+  post('/reset-form', async (req, res) => {
+    const account = await validateResetPassword(req);
+    if (!account) {
+      return res.redirect('/login?error=reset-not-found');
     }
-    const resetCode = randomUUID();
-    const result = await accounts.updateOne({
-      email
+    const password = (typeof req.body['new-password'] === 'string') && (req.body['new-password'].length > 0) && req.body['new-password'];
+    if (!password) {
+      // No ceremony required since they bypassed the required attribute
+      return res.redirect('/login');
+    }
+    await accounts.updateOne({
+      resetPasswordCode: req.session.resetPasswordCode
     }, {
       $set: {
-        resetRequestedAt: new Date(),
-        resetCode
+        passwordHash: passwordHash(password)
+      },
+      $unset: {
+        code: 1
       }
     });
-    // We don't want to disclose whether there was really
-    // a matching account or not
-    return res.redirect('/reset-sent');
+    return res.redirect('/login?reset=1');
   });
 
   post('/login', async (req, res) => {
@@ -464,6 +460,23 @@ export default async function sassypants(options = {}) {
         return req.res.status(500).send('An error occurred.');
       }
     }
+  }
+
+  async function validateResetPassword(req) {
+    if (!req.session.resetPasswordCode) {
+      return false;
+    }
+    const account = await accounts.findOne({
+      resetPasswordCode: req.session.resetPasswordCode
+    });
+    if (!account) {
+      return false;
+    }
+    const validAt = Date.now() - 60 * 1000 * (options?.reset?.minutes || 60);
+    if (account.resetRequestedAt < validAt) {
+      return false;
+    }
+    return account;
   }
 
   function fail(req, e) {
