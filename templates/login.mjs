@@ -36,5 +36,6 @@ export default function login({ error, reset }) {
       </button>
     </form>
     <a class="sa-login-reset-link" href="/reset">Reset your password</a>
+    <a class="sa-login-signup-link" href="/signup">Sign up</a>
   `;
 }
