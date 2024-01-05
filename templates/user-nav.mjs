@@ -1,7 +1,7 @@
-import { html, safeHtml } from 'common-tags';
+import { template, html } from '../helpers.mjs';
 
-export default function userNav({ user }) {
-  return user ? safeHtml`
+export default template(({ user }) => {
+  return user ? html`
     <nav class="sa-user-nav sa-logged-in">
       <span class="sa-user-name">Welcome, ${user.name}</span>
       <a class="sa-user-logout" href="/logout">Log Out</a>
@@ -12,4 +12,4 @@ export default function userNav({ user }) {
       <a class="sa-user-signup" href="/signup">Sign Up</a>
     </nav>
   `;
-}
+});

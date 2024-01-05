@@ -1,6 +1,6 @@
-import { html } from 'common-tags';
+import { template, html } from '../helpers.mjs';
 
-export default function reset() {
+export default template(() => {
   return html`
     <section class="sa-notice sa-signup-email-notice">
       A confirmation email has been sent to your
@@ -9,4 +9,4 @@ export default function reset() {
       do not see it soon, be sure to check your spam folder.
     </section>
   `;
-}
+});

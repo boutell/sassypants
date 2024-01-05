@@ -1,13 +1,12 @@
-import { html } from 'common-tags';
-import field from './field.mjs';
+import { template, html, input } from '../helpers.mjs';
 
-export default function reset() {
+export default template(() => {
   return html`
     <form class="sa-reset-form" method="POST" action="/reset">
-      ${field('email', 'Email Address', { required: true, type: 'email' })}
+      ${input('email', 'Email Address', { required: true, type: 'email' })}
       <button type="submit">
         Reset Password
       </button>
     </form>
   `;
-}
+});

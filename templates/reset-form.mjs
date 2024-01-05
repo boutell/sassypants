@@ -1,14 +1,13 @@
-import { html, safeHtml } from 'common-tags';
-import field from './field.mjs';
+import { template, html, input } from '../helpers.mjs';
 
-export default function resetForm({ code }) {
+export default template(({ code }) => {
   return html`
     <form class="sa-login-form" method="POST" action="/reset-form">
-      ${field('new-password', 'New Password', { required: true, type: 'password' })}
-      <input type="hidden" name="code" value="${safeHtml`${code}`}" />
+      ${input('new-password', 'New Password', { required: true, type: 'password' })}
+      <input type="hidden" name="code" value="${code}" />
       <button type="submit">
         Reset Password
       </button>
     </form>
   `;
-}
+});

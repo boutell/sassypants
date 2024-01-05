@@ -10,6 +10,8 @@ import passport from 'passport';
 import session from 'express-session';
 import MongoStore from 'connect-mongo';
 
+import * as staticHelpers from './helpers.mjs';
+
 import layoutTemplate from './templates/layout.mjs';
 import signupTemplate from './templates/signup.mjs';
 import signupSentTemplate from './templates/signup-sent.mjs';
@@ -20,6 +22,7 @@ import resetFormTemplate from './templates/reset-form.mjs';
 import confirmEmailTemplate from './templates/confirm-email.mjs';
 import resetEmailTemplate from './templates/reset-email.mjs';
 import userNavTemplate from './templates/user-nav.mjs';
+import errorTemplate from './templates/error.mjs';
 
 const { isEmail, normalizeEmail } = validator;
 
@@ -49,6 +52,7 @@ export default async function sassypants(options = {}) {
   const reset = options.templates?.reset || resetTemplate;
   const resetSent = options.templates?.resetSent || resetSentTemplate;
   const resetForm = options.templates?.resetForm || resetFormTemplate;
+  const error = options.templates?.error || errorTemplate;
   const userNav = options.templates?.userNav || userNavTemplate;
 
   const layoutFn = options.templates?.layout || layoutTemplate;
@@ -322,6 +326,11 @@ export default async function sassypants(options = {}) {
     await listen();
   }
 
+  const helpers = {
+    ...staticHelpers,
+    fragment: renderFragment
+  };
+
   return {
     app,
     dbClient,
@@ -333,8 +342,10 @@ export default async function sassypants(options = {}) {
     get,
     post,
     page,
+    renderFragment,
+    renderPage,
     sendPage,
-    sendEmail    
+    sendEmail
   };
 
   async function sendEmail(template, {
@@ -427,8 +438,8 @@ export default async function sassypants(options = {}) {
       }
     });
   }
-
-  function renderFragment(req, template, data = {}) {
+  
+  function renderTemplate(req, template, data = {}) {
     const data2 = {
       query: req.query,
       user: req.user,
@@ -436,15 +447,19 @@ export default async function sassypants(options = {}) {
       service: options.service,
       ...data
     };
-    return template(data2);
+    return template(data2, helpers);
+  }
+
+  function renderFragment(req, template, data = {}) {
+    return renderTemplate(req, template, data).toString();
   }
 
   function renderPage(req, template, data = {}) {
-    return renderFragment(req, layout, {
+    return renderTemplate(req, layout, {
       userNav,
       ...data,
-      body: renderFragment(req, template, data)
-    });
+      body: renderTemplate(req, template, data)
+    }).toString();
   }
 
   function sendPage(req, template, data = {}) {
@@ -453,7 +468,9 @@ export default async function sassypants(options = {}) {
     } catch (e) {
       console.error(e);
       try {
-        return req.res.status(500).send(renderPage(req, error, {}));
+        return req.res.status(500).send(renderPage(req, error, {
+          title: 'An error occurred'
+        }));
       } catch (e) {
         // Error template also failed
         console.error('Error in error template:', e);

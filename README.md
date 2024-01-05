@@ -81,29 +81,28 @@ await sassypants({
 ```javascript
 // templates/layout.mjs
 
-// I suggest using common-tags for simple templating
-import { html, safeHtml } from 'common-tags';
-
 export default function layout({
   title,
   body,
   user,
   userNav
+}, {
+  html
 }) {
   return html`
 <!DOCTYPE html>
 <html>
   <head>
-    <!-- Use safeHtml when the data is not trusted or escaped -->
-    <title>${safeHtml`${title}`}</title>
+    <!-- Ordinary strings are automatically escaped -->
+    <title>${title}</title>
   </head>
   <body>
     <header>
-      <!-- Trusted markup from another template -->
+      <!-- Markup from other templates is automatically left intact -->
       ${userNav({ user })}
     </header>
     <main>
-      <!-- Trusted markup from another template -->
+      <!-- Markup from other templates is automatically left intact -->
       ${body}
     </main>
   </body>
@@ -131,10 +130,13 @@ await sassypants({
 
 ```javascript
 // templates/user-nav.mjs
-import { html, safeHtml } from 'common-tags';
 
-export default function userNav({ user }) {
-  return user ? safeHtml`
+export default function userNav({
+  user
+}, {
+  html
+}) {
+  return user ? html`
     <nav class="sa-user-nav sa-logged-in">
       <span class="sa-user-name">Welcome, ${user.name}</span>
       <a class="sa-user-logout" href="/logout">Log Out</a>
@@ -274,6 +276,10 @@ sassypants({
   }
 })
 ```
+
+`confirmEmail` is rendered like any other template,
+but should not use the layout since it is not a
+full HTML page.
 
 ### Sending custom emails
 

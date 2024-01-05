@@ -1,11 +1,11 @@
-import { html, safeHtml } from 'common-tags';
+import { template, html } from '../helpers.mjs';
 
-export default function layout({
+export default template(({
   title,
   body,
   user,
   userNav
-}) {
+}) => {
   if (title == null) {
     throw new Error('title is required');
   }
@@ -16,7 +16,7 @@ export default function layout({
 <!DOCTYPE html>
 <html>
   <head>
-    <title>${safeHtml`${title}`}</title>
+    <title>${title}</title>
   </head>
   <body>
     <header>
@@ -28,4 +28,5 @@ export default function layout({
   </body>
 </html>
   `;
-}
+});
+

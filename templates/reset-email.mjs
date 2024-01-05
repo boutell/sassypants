@@ -1,7 +1,7 @@
-import { safeHtml } from 'common-tags';
+import { template, html } from '../helpers.mjs';
 
-export default function({ service, resetUrl }) {
-  return safeHtml`
+export default template(({ service, resetUrl }) => {
+  return html`
     <p>
       A request was made to reset your password
       on ${service}. If you made the request, you
@@ -15,4 +15,5 @@ export default function({ service, resetUrl }) {
       Someone may have entered your email address by accident. Sorry for the hassle.
     </p>
   `;
-}
+});
+

@@ -1,7 +1,7 @@
-import { safeHtml } from 'common-tags';
+import { template, html } from '../helpers.mjs';
 
-export default function({ service, confirmUrl }) {
-  return safeHtml`
+export default template(({ service, confirmUrl }) => {
+  return html`
     <p>
       Please confirm your account on ${service}
       by following the link below:
@@ -14,4 +14,5 @@ export default function({ service, confirmUrl }) {
       entered your email address by accident. Sorry for the hassle.
     </p>
   `;
-}
+});
+

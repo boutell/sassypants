@@ -1,7 +1,6 @@
-import { html } from 'common-tags';
-import field from './field.mjs';
+import { template, html, input } from '../helpers.mjs';
 
-export default function login({ error, reset }) {
+export default template(({ error, reset }) => {
   let errorMessage, message;
   if (error === 'invalid') {
     errorMessage = 'That login is not correct, or the account has not been confirmed. Please try again or reset your password.';
@@ -29,8 +28,8 @@ export default function login({ error, reset }) {
     ${errorMarkup}
     ${messageMarkup}
     <form class="sa-login-form" method="POST" action="/login">
-      ${field('email', 'Email Address', { required: true })}
-      ${field('password', 'Password', { required: true, type: 'password' })}
+      ${input('email', 'Email Address', { required: true })}
+      ${input('password', 'Password', { required: true, type: 'password' })}
       <button type="submit">
         Log In
       </button>
@@ -38,4 +37,4 @@ export default function login({ error, reset }) {
     <a class="sa-login-reset-link" href="/reset">Reset your password</a>
     <a class="sa-login-signup-link" href="/signup">Sign up</a>
   `;
-}
+});

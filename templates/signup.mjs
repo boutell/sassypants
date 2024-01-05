@@ -1,7 +1,6 @@
-import { html } from 'common-tags';
-import field from './field.mjs';
+import { template, html, input } from '../helpers.mjs';
 
-export default function login({ error }) {
+export default template(({ error }) => {
   let errorMessage;
   if (error === 'unconfirmed') {
     errorMessage = 'That email address is already associated with an account that has not been confirmed. Please check your inbox as well as your spam folder.';
@@ -16,12 +15,12 @@ export default function login({ error }) {
   return html`
     ${errorMarkup}
     <form method="POST" action="/signup">
-      ${field('email', 'Email Address', { required: true, type: 'email' })}
-      ${field('name', 'Full Name', { required: true })}
-      ${field('password', 'Password', { required: true, type: 'password' })}
+      ${input('email', 'Email Address', { required: true, type: 'email' })}
+      ${input('name', 'Full Name', { required: true })}
+      ${input('password', 'Password', { required: true, type: 'password' })}
       <button type="submit">
         Sign Up
       </button>
     </form>
   `;
-}
+});

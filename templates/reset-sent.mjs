@@ -1,6 +1,6 @@
-import { html } from 'common-tags';
+import { template, html } from '../helpers.mjs';
 
-export default function reset() {
+export default template(() => {
   return html`
     <section class="sa-notice sa-reset-email-notice">
       If an account exists with that email address,
@@ -9,4 +9,4 @@ export default function reset() {
       be sure to check your spam folder.
     </section>
   `;
-}
+});
