@@ -1,6 +1,6 @@
-import { template, html, input } from '../helpers.mjs';
+import { html, input } from '../helpers.mjs';
 
-export default template(() => {
+export default function template() {
   return html`
     <form class="sa-reset-form" method="POST" action="/reset">
       ${input('email', 'Email Address', { required: true, type: 'email' })}
@@ -9,4 +9,4 @@ export default template(() => {
       </button>
     </form>
   `;
-});
+}

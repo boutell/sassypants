@@ -1,6 +1,6 @@
-import { template, html } from '../helpers.mjs';
+import { html } from '../helpers.mjs';
 
-export default template(() => {
+export default function template() {
   return html`
     <section class="sa-notice sa-reset-email-notice">
       If an account exists with that email address,
@@ -9,4 +9,4 @@ export default template(() => {
       be sure to check your spam folder.
     </section>
   `;
-});
+}

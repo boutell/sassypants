@@ -1,6 +1,6 @@
-import { template, html } from '../helpers.mjs';
+import { html } from '../helpers.mjs';
 
-export default template(() => {
+export default function template() {
   return html`
     <section class="sa-notice sa-signup-email-notice">
       A confirmation email has been sent to your
@@ -9,4 +9,4 @@ export default template(() => {
       do not see it soon, be sure to check your spam folder.
     </section>
   `;
-});
+}

@@ -1,6 +1,6 @@
-import { template, html } from '../helpers.mjs';
+import { html } from '../helpers.mjs';
 
-export default template(({ service, resetUrl }) => {
+export default function template({ service, resetUrl }) {
   return html`
     <p>
       A request was made to reset your password
@@ -15,5 +15,5 @@ export default template(({ service, resetUrl }) => {
       Someone may have entered your email address by accident. Sorry for the hassle.
     </p>
   `;
-});
+}
 

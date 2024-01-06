@@ -345,6 +345,7 @@ You must specify:
 
 ### Other options
 
+* If set, `normalizeEmail: true` will strictly normalize email addresses so that users can't sign up under several variations of the same address that ultimately reach the same inbox due to policies of various email providers. Otherwise, email addresses are normalized to lowercase (always safe in 2024) but otherwise left alone. See the [validator](https://www.npmjs.com/package/validator) package documentation for more information.
 * If set, `transport` must either (a) a nodemailer transport object, or (b) a simple object suitable to configure nodemailer's SMTP transport, as shown above. If not set, the `sendmailer` nodemailer transport is used, which probably won't work (see above).
 * If set, `dbUri` hard-codes a MongoDB database URI. It is usually better to use the `MONGODB_URI` environment variable.
 * If set, `dbClient` passes an existing MongoDB client object, and a new connection is not made.

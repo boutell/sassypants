@@ -1,6 +1,6 @@
-import { template, html } from '../helpers.mjs';
+import { html } from '../helpers.mjs';
 
-export default template(({ service, confirmUrl }) => {
+export default function template({ service, confirmUrl }) {
   return html`
     <p>
       Please confirm your account on ${service}
@@ -14,5 +14,5 @@ export default template(({ service, confirmUrl }) => {
       entered your email address by accident. Sorry for the hassle.
     </p>
   `;
-});
+}
 

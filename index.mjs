@@ -10,11 +10,10 @@ import passport from 'passport';
 import session from 'express-session';
 import MongoStore from 'connect-mongo';
 
-import * as staticHelpers from './helpers.mjs';
-
 import layoutTemplate from './templates/layout.mjs';
 import signupTemplate from './templates/signup.mjs';
 import signupSentTemplate from './templates/signup-sent.mjs';
+import confirmErrorTemplate from './templates/confirm-error.mjs';
 import loginTemplate from './templates/login.mjs';
 import resetTemplate from './templates/reset.mjs';
 import resetSentTemplate from './templates/reset-sent.mjs';
@@ -24,7 +23,7 @@ import resetEmailTemplate from './templates/reset-email.mjs';
 import userNavTemplate from './templates/user-nav.mjs';
 import errorTemplate from './templates/error.mjs';
 
-const { isEmail, normalizeEmail } = validator;
+const { isEmail, normalizeEmail: strictlyNormalizeEmail } = validator;
 
 // Required options: root (path to root folder of application)
 
@@ -46,6 +45,7 @@ export default async function sassypants(options = {}) {
   }
   const signup = options.templates?.signup || signupTemplate;
   const signupSent = options.templates?.signupSent || signupSentTemplate;
+  const confirmError = options.templates?.confirmError || confirmErrorTemplate;
   const login = options.templates?.login || loginTemplate;
   const confirmEmail = options.templates?.confirmEmail || confirmEmailTemplate;
   const resetEmail = options.templates?.resetEmail || resetEmailTemplate;
@@ -81,8 +81,6 @@ export default async function sassypants(options = {}) {
   });
   await accounts.createIndex({
     confirmationCode: 1
-  }, {
-    unique: 1
   });
 
   const app = options.app || express();
@@ -121,7 +119,8 @@ export default async function sassypants(options = {}) {
   page('/login', login, req => ({
     title: 'Log In',
     error: req.query.error,
-    reset: req.query.reset
+    reset: !!req.query.reset,
+    confirmed: !!req.query.confirmed
   }));
 
   get('/logout', async (req, res) => {
@@ -145,7 +144,13 @@ export default async function sassypants(options = {}) {
   page('/signup-sent', signupSent, req => ({
     title: 'Please check your email'
   }));
- 
+
+  page('/confirm-error', confirmError, req => {
+    return {
+      title: 'Confirmation code not accepted'
+    };
+  });
+
   page('/reset', reset, req => ({
     title: 'Reset Password'
   }));
@@ -173,7 +178,7 @@ export default async function sassypants(options = {}) {
   });
 
   post('/signup', async (req, res) => {
-    const email = isEmail(req.body.email) && normalizeEmail(req.body.email);
+    let email = isEmail(req.body.email) && normalizeEmail(req.body.email);
     const name = ((((typeof req.body.name) === 'string') && req.body.name) || '').replace(/"/g, '').replace(/,/g, '').substring(0, 100);
     const password = (typeof req.body.password === 'string') && (req.body.password.length > 0) && req.body.password;
     if (!(email && name && password)) {
@@ -183,16 +188,26 @@ export default async function sassypants(options = {}) {
     }
     const confirmationCode = randomUUID();
     try {
+      // Don't be difficult. People lose their
+      // confirmation emails constantly and
+      // spamming this form isn't going to
+      // get you a guessable confirmation code, ever
+      await accounts.deleteOne({
+        email,
+        confirmed: false
+      });
       await accounts.insertOne({
         _id: randomUUID(),
         email,
         name,
         confirmationCode,
+        confirmationRequestedAt: Date.now(),
         createdAt: new Date(),
         confirmed: false,
         passwordHash: passwordHash(password)
       });
     } catch (e) {
+      console.error(e);
       if (e.toString().match(/duplicate/i)) {
         return res.redirect('/login?error=duplicate');
       }
@@ -214,8 +229,13 @@ export default async function sassypants(options = {}) {
       confirmationCode: req.params.confirmationCode
     });
     if (!found) {
-      return res.redirect('/confirm?error=invalid');
+      return res.redirect('/confirm-error');
     }
+    const validAt = Date.now() - 60 * 1000 * (options?.confirm?.minutes || 60 * 24);
+    if (found.confirmationRequestedAt < validAt) {
+      return res.redirect('/confirm-error');
+    }
+
     const result = await accounts.updateOne({
       _id: found._id,
       // Race condition guard
@@ -230,9 +250,9 @@ export default async function sassypants(options = {}) {
       }
     });
     if (result.modifiedCount === 1) {
-      return res.redirect('/?success=confirmed&form=0');
+      return res.redirect('/login?confirmed=1');
     } else {
-      return res.redirect('/?confirm?error=invalid');
+      return res.redirect('/confirm-error');
     }
   });
 
@@ -326,11 +346,6 @@ export default async function sassypants(options = {}) {
     await listen();
   }
 
-  const helpers = {
-    ...staticHelpers,
-    fragment: renderFragment
-  };
-
   return {
     app,
     dbClient,
@@ -360,7 +375,7 @@ export default async function sassypants(options = {}) {
       subject,
       service: options.service,
       ...data
-    });
+    }).toString();
     return transport.sendMail({
       from: `"${options.email.from.name}" <${options.email.from.email}>`, // sender address
       to: `"${name}" <${email}>`,
@@ -447,7 +462,7 @@ export default async function sassypants(options = {}) {
       service: options.service,
       ...data
     };
-    return template(data2, helpers);
+    return template(data2);
   }
 
   function renderFragment(req, template, data = {}) {
@@ -498,6 +513,17 @@ export default async function sassypants(options = {}) {
 
   function fail(req, e) {
     console.error(e);
-    return sendPage(req, 'error', {});
+    return sendPage(req, error, {
+      title: 'Error'
+    });
   }
+
+  function normalizeEmail(email) {
+    if (options.normalizeEmail) {
+      email = strictlyNormalizeEmail(email);
+    }
+    email = email.toLowerCase();
+    return email;
+  };
+
 }

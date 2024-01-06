@@ -1,6 +1,6 @@
-import { template, html } from '../helpers.mjs';
+import { html } from '../helpers.mjs';
 
-export default template(({ user }) => {
+export default function template({ user }) {
   return user ? html`
     <nav class="sa-user-nav sa-logged-in">
       <span class="sa-user-name">Welcome, ${user.name}</span>
@@ -12,4 +12,4 @@ export default template(({ user }) => {
       <a class="sa-user-signup" href="/signup">Sign Up</a>
     </nav>
   `;
-});
+}

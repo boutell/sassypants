@@ -1,11 +1,11 @@
-import { template, html } from '../helpers.mjs';
+import { html } from '../helpers.mjs';
 
-export default template(({
+export default function template(
   title,
   body,
   user,
   userNav
-}) => {
+ ) {
   if (title == null) {
     throw new Error('title is required');
   }
@@ -28,5 +28,5 @@ export default template(({
   </body>
 </html>
   `;
-});
+}
 
