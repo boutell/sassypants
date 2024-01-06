@@ -1,4 +1,4 @@
-import { template, html, input } from '../helpers.mjs';
+import { template, html, safe, input } from '../helpers.mjs';
 
 export default template(({ error, reset }) => {
   let errorMessage, message;
@@ -25,8 +25,8 @@ export default template(({ error, reset }) => {
   </section>
   ` : '';
   return html`
-    ${errorMarkup}
-    ${messageMarkup}
+    ${safe(errorMarkup)}
+    ${safe(messageMarkup)}
     <form class="sa-login-form" method="POST" action="/login">
       ${input('email', 'Email Address', { required: true })}
       ${input('password', 'Password', { required: true, type: 'password' })}
