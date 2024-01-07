@@ -19,6 +19,7 @@ import resetTemplate from './templates/reset.mjs';
 import resetSentTemplate from './templates/reset-sent.mjs';
 import resetFormTemplate from './templates/reset-form.mjs';
 import confirmEmailTemplate from './templates/confirm-email.mjs';
+import existingEmailTemplate from './templates/existing-email.mjs';
 import resetEmailTemplate from './templates/reset-email.mjs';
 import userNavTemplate from './templates/user-nav.mjs';
 import errorTemplate from './templates/error.mjs';
@@ -48,6 +49,7 @@ export default async function sassypants(options = {}) {
   const confirmError = options.templates?.confirmError || confirmErrorTemplate;
   const login = options.templates?.login || loginTemplate;
   const confirmEmail = options.templates?.confirmEmail || confirmEmailTemplate;
+  const existingEmail = options.templates?.existingEmail || existingEmailTemplate;
   const resetEmail = options.templates?.resetEmail || resetEmailTemplate;
   const reset = options.templates?.reset || resetTemplate;
   const resetSent = options.templates?.resetSent || resetSentTemplate;
@@ -145,11 +147,9 @@ export default async function sassypants(options = {}) {
     title: 'Please check your email'
   }));
 
-  page('/confirm-error', confirmError, req => {
-    return {
-      title: 'Confirmation code not accepted'
-    };
-  });
+  page('/confirm-error', confirmError, req => ({
+    title: 'Confirmation code not accepted'
+  }));
 
   page('/reset', reset, req => ({
     title: 'Reset Password'
@@ -209,7 +209,13 @@ export default async function sassypants(options = {}) {
     } catch (e) {
       console.error(e);
       if (e.toString().match(/duplicate/i)) {
-        return res.redirect('/login?error=duplicate');
+        await sendEmail(existingEmail, {
+          name,
+          email,
+          resetUrl: `${options.baseUrl}/reset`,
+          subject: options.email?.existing?.subject || `You already have an account on ${options.service}`,
+        });
+        return res.redirect('/signup-sent');
       }
       throw e;
     }
