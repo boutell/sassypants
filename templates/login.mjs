@@ -1,6 +1,7 @@
-import { html, safe, input } from '../helpers.mjs';
-
-export default function template({ error, reset, confirmed }) {
+export default function template(
+  { error, reset, confirmed },
+  { html, safe, input }
+) {
   let errorMessage, message;
   if (error === 'invalid') {
     errorMessage = 'That login is not correct, or the account has not been confirmed. Please try again or reset your password.';

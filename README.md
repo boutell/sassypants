@@ -16,47 +16,43 @@ sassypants is based on Express. Familiarity with Express helps a lot, especially
 A minimal configuration looks like:
 
 ```javascript
-// Path to the app itself
+import { fileURLToPath } from 'url';
+import sassypants from 'sassypants';
+
 const root = fileURLToPath(new URL('.', import.meta.url));
 
-import sassypants from 'sassypants';
-import layoutTemplate from './templates/layout.mjs';
-
-const {
-  app,
-  db,
-  layout,
-  page,
-  get,
-  post
-} = await sassypants({
+const { app, db, page } = await sassypants({
   baseUrl: 'http://localhost:3000',
-  service: 'Cosmic Clipboard',
-  shortName: 'cc',
+  service: 'Free Cats',
+  shortName: 'fc',
   root,
+  templates: {
+    layout: layoutTemplate
+  },
   session: {
-    secret: 'Z0sH6nU3vT1x.cLt'
+    secret: 'chooseyourown'
   },
   email: {
     from: {
-      name: 'Cosmic Clipboard',
-      email: 'cc@boutell.dev'
+      name: 'Free Cats',
+      email: 'freecats@freecats.madeup'
     },
     transport: {
       host: 'smtp.ethereal.email',
       port: 587,
       auth: {
-          user: 'something@ethereal.email',
-          pass: 'somepassword'
+        user: 'gogetyourown@ethereal.email',
+        pass: 'gogetyourown'
       }
     }
   }
 });
+
 ```
 
 ## Connnecting to the database
 
-A MongoDB database is required. If not otherwise specified, sassypants looks for MongoDB running on your own computer, and uses `shortName` as the database name within that. To use MongoDB Atlas instead, set the `MONGODB_URI` environment variable to the URI provided by Atlas. Be sure to include the database name in the URI (`/my-db-name-here` at the end, but before any `?`).
+A MongoDB database is required. If not otherwise specified, sassypants looks for MongoDB running on your own computer, and uses `shortName` as the database name within that. To use MongoDB Atlas instead, set the `MONGODB_URI` environment variable to the connection URI provided by Atlas. Be sure to include the database name in the URI (`/my-db-name-here` at the end, but before any `?`).
 
 ## Overriding the layout
 

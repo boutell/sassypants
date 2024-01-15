@@ -1,6 +1,4 @@
-import { html } from '../helpers.mjs';
-
-export default function template({ service, confirmUrl }) {
+export default function template({ service, confirmUrl }, { html }) {
   return html`
     <p>
       Please confirm your account on ${service}

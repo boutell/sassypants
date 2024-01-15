@@ -1,2 +1,2 @@
-export { html, safe } from './lib/strings.mjs';
+export { html, safe, tag } from './lib/strings.mjs';
 export { input } from './lib/fields.mjs';

@@ -1,6 +1,4 @@
-import { html } from '../helpers.mjs';
-
-export default function template({ user }) {
+export default function template({ user }, { html }) {
   return user ? html`
     <nav class="sa-user-nav sa-logged-in">
       <span class="sa-user-name">Welcome, ${user.name}</span>

@@ -9,7 +9,10 @@ import { convert } from 'html-to-text';
 import passport from 'passport';
 import session from 'express-session';
 import MongoStore from 'connect-mongo';
-
+import * as helpers from './helpers.mjs';
+import i18next from 'i18next';
+import i18nextHttpMiddleware from 'i18next-http-middleware';
+import scaffoldTemplate from './templates/scaffold.mjs';
 import layoutTemplate from './templates/layout.mjs';
 import signupTemplate from './templates/signup.mjs';
 import signupSentTemplate from './templates/signup-sent.mjs';
@@ -57,13 +60,8 @@ export default async function sassypants(options = {}) {
   const error = options.templates?.error || errorTemplate;
   const userNav = options.templates?.userNav || userNavTemplate;
 
-  const layoutFn = options.templates?.layout || layoutTemplate;
-  const layout = options => {
-    return layoutFn({
-      userNav,
-      ...options
-    });
-  };
+  const layout = options.templates?.layout || layoutTemplate;
+  const scaffold = options.templates?.scaffold || scaffoldTemplate;
 
   // transport option can be a simple object with
   // SMTP parameters, or an existing transport object.
@@ -71,6 +69,11 @@ export default async function sassypants(options = {}) {
   const transport = options.email?.transport?.host ? nodemailer.createTransport(options.email.transport) : (options.email?.transport || nodemailer.createTransport({
     sendmail: true
   }));
+
+  const i18n = await i18next.createInstance({
+    debug: process.env.NODE_ENV !== 'production',
+    ...options.i18n
+  });
 
   const dbClient = options.dbClient || new MongoClient(options.dbUri || process.env.MONGODB_URI || `mongodb://localhost:27017/${options.shortName}`);
   await dbClient.connect();
@@ -98,9 +101,8 @@ export default async function sassypants(options = {}) {
     ...options.session
   }));
 
-  app.use((req, res, next) => {
-    return next();
-  });
+  // i18n.use(i18nextHttpMiddleware.LanguageDetector);
+  // app.use(i18nextHttpMiddleware.handle(i18n, options.i18nextMiddleware || {}));
 
   passport.serializeUser((user, callback) => {
     return callback(null, user._id);
@@ -118,7 +120,22 @@ export default async function sassypants(options = {}) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  page('/login', login, req => ({
+  const templates = {
+    signup,
+    signupSent,
+    confirmError,
+    login,
+    confirmEmail,
+    existingEmail,
+    resetEmail,
+    reset,
+    resetSent,
+    resetForm,
+    error,
+    userNav
+  };
+
+  page('/login', 'login', req => ({
     title: 'Log In',
     error: req.query.error,
     reset: !!req.query.reset,
@@ -138,24 +155,24 @@ export default async function sassypants(options = {}) {
     return res.redirect(options.logout?.after || '/');
   });
 
-  page('/signup', signup, req => ({
+  page('/signup', 'signup', req => ({
     title: 'Sign Up',
     error: req.query.error
   }));
 
-  page('/signup-sent', signupSent, req => ({
+  page('/signup-sent', 'signupSent', req => ({
     title: 'Please check your email'
   }));
 
-  page('/confirm-error', confirmError, req => ({
+  page('/confirm-error', 'confirmError', req => ({
     title: 'Confirmation code not accepted'
   }));
 
-  page('/reset', reset, req => ({
+  page('/reset', 'reset', req => ({
     title: 'Reset Password'
   }));
 
-  page('/reset-sent', resetSent, req => ({
+  page('/reset-sent', 'resetSent', req => ({
     title: 'Please Check Your Inbox'
   }));
 
@@ -168,7 +185,7 @@ export default async function sassypants(options = {}) {
     return res.redirect('/reset-form');
   });
 
-  page('/reset-form', resetForm, async req => {
+  page('/reset-form', 'resetForm', async req => {
     if (!await validateResetPassword(req)) {
       res.redirect('/login?error=reset-not-found');
     }
@@ -209,7 +226,7 @@ export default async function sassypants(options = {}) {
     } catch (e) {
       console.error(e);
       if (e.toString().match(/duplicate/i)) {
-        await sendEmail(existingEmail, {
+        await sendEmail(req, existingEmail, {
           name,
           email,
           resetUrl: `${options.baseUrl}/reset`,
@@ -221,7 +238,7 @@ export default async function sassypants(options = {}) {
     }
       
     const confirmUrl = `${options.baseUrl}/confirm/${confirmationCode}`;
-    await sendEmail(confirmEmail, {
+    await sendEmail(req, confirmEmail, {
       name,
       email,
       subject: options.email?.confirm?.subject || `Confirm your account on ${options.service}`,
@@ -283,7 +300,7 @@ export default async function sassypants(options = {}) {
         email
       });
       const resetUrl = `${options.baseUrl}/reset/${resetPasswordCode}`;
-      await sendEmail(resetEmail, {
+      await sendEmail(req, resetEmail, {
         name: account.name,
         email: account.email,
         subject: options.email?.reset?.subject || `Resetting your password on ${options.service}`,
@@ -356,10 +373,9 @@ export default async function sassypants(options = {}) {
     app,
     dbClient,
     db,
+    i18next,
     accounts,
     passport,
-    layout,
-    userNav,
     get,
     post,
     page,
@@ -369,13 +385,13 @@ export default async function sassypants(options = {}) {
     sendEmail
   };
 
-  async function sendEmail(template, {
+  async function sendEmail(req, template, {
     name,
     email,
     subject,
     ...data
   } = {}) {
-    const html = template({
+    const html = renderTemplate(req, template, {
       name,
       email,
       subject,
@@ -461,14 +477,29 @@ export default async function sassypants(options = {}) {
   }
   
   function renderTemplate(req, template, data = {}) {
+    if ((typeof template) === 'string') {
+      template = templates[template];
+      if (!template) {
+        throw new Error(`${template} is not a registered template name`);
+      }
+    }
     const data2 = {
       query: req.query,
       user: req.user,
       session: req.session,
       service: options.service,
+      locale: req.locale,
+      lang: req.lang,
       ...data
     };
-    return template(data2);
+    const _helpers = {
+      ...helpers,
+      t: req.t,
+      render(template, data) {
+        return renderTemplate(req, template, data);
+      }
+    };
+    return template(data2, _helpers);
   }
 
   function renderFragment(req, template, data = {}) {
@@ -476,11 +507,34 @@ export default async function sassypants(options = {}) {
   }
 
   function renderPage(req, template, data = {}) {
-    return renderTemplate(req, layout, {
-      userNav,
+    let pageOutput = expand(renderTemplate(req, template, data));
+    const layoutOutput = expand(renderTemplate(req, layout, {
       ...data,
-      body: renderTemplate(req, template, data)
-    }).toString();
+      ...pageOutput
+    }));
+    const scaffoldOutput = renderTemplate(
+      req,
+      scaffold,
+      {
+        ...data,
+        ...layoutOutput
+      }
+    );
+    return scaffoldOutput.toString();
+    function expand(output) {
+      if (!output.body) {
+        return {
+          ...data,
+          body: output
+        };
+      } else {
+        return {
+          ...data,
+          ...output
+        };
+      }
+
+    }
   }
 
   function sendPage(req, template, data = {}) {

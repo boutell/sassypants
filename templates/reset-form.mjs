@@ -1,6 +1,4 @@
-import { html, input } from '../helpers.mjs';
-
-export default function template({ code }) {
+export default function template({ code }, { html, input }) {
   return html`
     <form class="sa-login-form" method="POST" action="/reset-form">
       ${input('new-password', 'New Password', { required: true, type: 'password' })}

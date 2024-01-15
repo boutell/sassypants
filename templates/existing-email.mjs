@@ -1,6 +1,4 @@
-import { html } from '../helpers.mjs';
-
-export default function template({ service, resetUrl }) {
+export default function template({ service, resetUrl }, { html }) {
   return html`
     <p>
       Someone tried to sign up for an account on ${service} with this email

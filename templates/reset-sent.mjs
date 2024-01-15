@@ -1,6 +1,4 @@
-import { html } from '../helpers.mjs';
-
-export default function template() {
+export default function template({}, { html }) {
   return html`
     <section class="sa-notice sa-reset-email-notice">
       If an account exists with that email address,

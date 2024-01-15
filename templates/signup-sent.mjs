@@ -1,6 +1,4 @@
-import { html } from '../helpers.mjs';
-
-export default function template() {
+export default function template({}, { html }) {
   return html`
     <section class="sa-notice sa-signup-email-notice">
       If you don't have an account yet, then 

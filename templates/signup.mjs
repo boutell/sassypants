@@ -1,6 +1,4 @@
-import { html, input } from '../helpers.mjs';
-
-export default function template({ error }) {
+export default function template({ error }, { html, input }) {
   let errorMessage;
   if (error === 'unconfirmed') {
     errorMessage = 'That email address is already associated with an account that has not been confirmed. Please check your inbox as well as your spam folder.';

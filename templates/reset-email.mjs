@@ -1,6 +1,4 @@
-import { html } from '../helpers.mjs';
-
-export default function template({ service, resetUrl }) {
+export default function template({ service, resetUrl }, { html }) {
   return html`
     <p>
       A request was made to reset your password
