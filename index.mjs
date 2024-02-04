@@ -11,21 +11,10 @@ import session from 'express-session';
 import MongoStore from 'connect-mongo';
 import * as helpers from './helpers.mjs';
 import i18next from 'i18next';
-import i18nextHttpMiddleware from 'i18next-http-middleware';
-import scaffoldTemplate from './templates/scaffold.mjs';
-import layoutTemplate from './templates/layout.mjs';
-import signupTemplate from './templates/signup.mjs';
-import signupSentTemplate from './templates/signup-sent.mjs';
-import confirmErrorTemplate from './templates/confirm-error.mjs';
-import loginTemplate from './templates/login.mjs';
-import resetTemplate from './templates/reset.mjs';
-import resetSentTemplate from './templates/reset-sent.mjs';
-import resetFormTemplate from './templates/reset-form.mjs';
-import confirmEmailTemplate from './templates/confirm-email.mjs';
-import existingEmailTemplate from './templates/existing-email.mjs';
-import resetEmailTemplate from './templates/reset-email.mjs';
-import userNavTemplate from './templates/user-nav.mjs';
-import errorTemplate from './templates/error.mjs';
+// import i18nextHttpMiddleware from 'i18next-http-middleware';
+import * as url from 'url';
+import fs from 'fs';
+import camelize from './lib/camelize.js';
 
 const { isEmail, normalizeEmail: strictlyNormalizeEmail } = validator;
 
@@ -47,21 +36,13 @@ export default async function sassypants(options = {}) {
   if (!options.baseUrl) {
     throw new Error('baseUrl option is required');
   }
-  const signup = options.templates?.signup || signupTemplate;
-  const signupSent = options.templates?.signupSent || signupSentTemplate;
-  const confirmError = options.templates?.confirmError || confirmErrorTemplate;
-  const login = options.templates?.login || loginTemplate;
-  const confirmEmail = options.templates?.confirmEmail || confirmEmailTemplate;
-  const existingEmail = options.templates?.existingEmail || existingEmailTemplate;
-  const resetEmail = options.templates?.resetEmail || resetEmailTemplate;
-  const reset = options.templates?.reset || resetTemplate;
-  const resetSent = options.templates?.resetSent || resetSentTemplate;
-  const resetForm = options.templates?.resetForm || resetFormTemplate;
-  const error = options.templates?.error || errorTemplate;
-  const userNav = options.templates?.userNav || userNavTemplate;
 
-  const layout = options.templates?.layout || layoutTemplate;
-  const scaffold = options.templates?.scaffold || scaffoldTemplate;
+  const dirname = url.fileURLToPath(new URL('.', import.meta.url));
+
+  const templates = {
+    ...await loadTemplates(`${dirname}/templates`),
+    ...options.templates
+  };
 
   // transport option can be a simple object with
   // SMTP parameters, or an existing transport object.
@@ -119,21 +100,6 @@ export default async function sassypants(options = {}) {
 
   app.use(passport.initialize());
   app.use(passport.session());
-
-  const templates = {
-    signup,
-    signupSent,
-    confirmError,
-    login,
-    confirmEmail,
-    existingEmail,
-    resetEmail,
-    reset,
-    resetSent,
-    resetForm,
-    error,
-    userNav
-  };
 
   page('/login', 'login', req => ({
     title: 'Log In',
@@ -226,7 +192,7 @@ export default async function sassypants(options = {}) {
     } catch (e) {
       console.error(e);
       if (e.toString().match(/duplicate/i)) {
-        await sendEmail(req, existingEmail, {
+        await sendEmail(req, 'existingEmail', {
           name,
           email,
           resetUrl: `${options.baseUrl}/reset`,
@@ -238,7 +204,7 @@ export default async function sassypants(options = {}) {
     }
       
     const confirmUrl = `${options.baseUrl}/confirm/${confirmationCode}`;
-    await sendEmail(req, confirmEmail, {
+    await sendEmail(req, 'confirmEmail', {
       name,
       email,
       subject: options.email?.confirm?.subject || `Confirm your account on ${options.service}`,
@@ -300,7 +266,7 @@ export default async function sassypants(options = {}) {
         email
       });
       const resetUrl = `${options.baseUrl}/reset/${resetPasswordCode}`;
-      await sendEmail(req, resetEmail, {
+      await sendEmail(req, 'resetEmail', {
         name: account.name,
         email: account.email,
         subject: options.email?.reset?.subject || `Resetting your password on ${options.service}`,
@@ -379,6 +345,8 @@ export default async function sassypants(options = {}) {
     get,
     post,
     page,
+    template,
+    loadTemplates,
     renderFragment,
     renderPage,
     sendPage,
@@ -508,13 +476,13 @@ export default async function sassypants(options = {}) {
 
   function renderPage(req, template, data = {}) {
     let pageOutput = expand(renderTemplate(req, template, data));
-    const layoutOutput = expand(renderTemplate(req, layout, {
+    const layoutOutput = expand(renderTemplate(req, templates.layout, {
       ...data,
       ...pageOutput
     }));
     const scaffoldOutput = renderTemplate(
       req,
-      scaffold,
+      templates.scaffold,
       {
         ...data,
         ...layoutOutput
@@ -543,7 +511,7 @@ export default async function sassypants(options = {}) {
     } catch (e) {
       console.error(e);
       try {
-        return req.res.status(500).send(renderPage(req, error, {
+        return req.res.status(500).send(renderPage(req, 'error', {
           title: 'An error occurred'
         }));
       } catch (e) {
@@ -573,7 +541,7 @@ export default async function sassypants(options = {}) {
 
   function fail(req, e) {
     console.error(e);
-    return sendPage(req, error, {
+    return sendPage(req, 'error', {
       title: 'Error'
     });
   }
@@ -585,5 +553,22 @@ export default async function sassypants(options = {}) {
     email = email.toLowerCase();
     return email;
   };
+
+  async function loadTemplates(dir) {
+    const templates = {};
+    const names = fs.readdirSync(dir);
+    for (let name of names) {
+      const template = (await import(`${dir}/${name}`)).default;
+      name = camelize(name.replace('.mjs', ''));
+      templates[name] = template;
+    }
+    return templates;
+  };
+
+  // Register or override previous registration of a
+  // template function by name
+  function template(name, fn) {
+    templates[name] = fn;
+  }
 
 }
