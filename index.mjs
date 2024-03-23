@@ -37,6 +37,8 @@ export default async function sassypants(options = {}) {
     throw new Error('baseUrl option is required');
   }
 
+  let server;
+
   const dirname = url.fileURLToPath(new URL('.', import.meta.url));
 
   const templates = {
@@ -336,6 +338,7 @@ export default async function sassypants(options = {}) {
   }
 
   return {
+    server,
     app,
     dbClient,
     db,
@@ -380,7 +383,7 @@ export default async function sassypants(options = {}) {
   async function listen() {
     const port = process.env.PORT || 3000;
     const listen = promisify((callback) => {
-      return app.listen(port, callback);
+      server = app.listen(port, callback);
     });
     await listen();
     console.log(`Listening on port ${port}`);

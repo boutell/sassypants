@@ -325,6 +325,24 @@ to the MongoDB collection containing the accounts.
 
 The contents of the `/public` folder of your project are automatically served with the `express.static` middleware.
 
+To prevent browsers from caching old assets from previous releases, use the `asset` helper. For example:
+
+```javascript
+export default function template({}, { html, tag, asset }) {
+  return html`
+    ${tag('script', { src: asset('/js/main.js') }), ''}
+    <!-- various markup here -->
+  `;
+}
+```
+
+This will add a "cache buster" to the asset URL, for instance
+`/js/main.js?cb=xyzpdq`. The "cache buster" will be set to
+the value of the `RELEASE_ID` environment variable. If you don't
+set it, then it will be determined at random when the process
+starts up, which is fine for development. In production you should
+set the variable to a new value with each new release of your app.
+
 ## Guide to all options
 
 > Dotted option names like `session.secret` refer to the `secret` sub-property of the `session` property of the configuration object passed to sassypants.
@@ -360,3 +378,9 @@ customize this to another port by setting the `PORT`
 environment variable. If the `app` option is passed in
 then you are responsible for listening for connections
 yourself.
+
+## Accessing the HTTP server object
+
+If you need access to the Node.js server object, for instance
+to add logic for websocket connections, you can access `server`
+as a property of the object returned by the `sassypants` function.
